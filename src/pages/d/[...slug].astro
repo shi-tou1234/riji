@@ -1,0 +1,36 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '@layouts/Base.astro';
+import Toc from '@components/Toc.astro';
+import { formatDateCN, readingTime, excerpt } from '@utils/format';
+import { withBase } from '@utils/urls';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('diary', ({ data }) => !data.draft);
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+const minutes = readingTime(entry.body ?? '');
+---
+
+<Base title={entry.data.title} description={entry.data.summary || excerpt(entry.body ?? '', 60)}>
+  <div class="post">
+    <article class="post__main">
+      <a class="back" href={withBase('')}>← 回到时间线</a>
+      <h1 class="post__title">{entry.data.title}</h1>
+      <p class="post__meta">
+        <time datetime={entry.data.date.toISOString()}>{formatDateCN(entry.data.date)}</time>
+        <span>约 {minutes} 分钟</span>
+      </p>
+      <div class="post-content">
+        <Content />
+      </div>
+    </article>
+    <Toc headings={headings} />
+  </div>
+</Base>

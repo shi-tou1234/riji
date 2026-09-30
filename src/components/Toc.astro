@@ -1,0 +1,26 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+// 只要 h2/h3：h1 已经是大标题了，再收进来是噪音
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{items.length > 1 && (
+  <nav class="toc" aria-label="目录">
+    <p class="toc__label">目录</p>
+    <ul class="toc__list">
+      {items.map((h) => (
+        <li class={`toc__item toc__item--${h.depth}`}>
+          <a class="toc__link" href={`#${h.slug}`}>
+            {h.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}

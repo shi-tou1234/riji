@@ -1,0 +1,46 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '@layouts/Base.astro';
+import EntryCard from '@components/EntryCard.astro';
+import siteInfo from '@/config';
+import { excerpt } from '@utils/format';
+
+const entries = (await getCollection('diary', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const first = entries.at(-1);
+const startText = first
+  ? `${first.data.date.getFullYear()}.${String(first.data.date.getMonth() + 1).padStart(2, '0')}`
+  : siteInfo.createdAt.replaceAll('-', '.');
+---
+
+<Base>
+  <section class="hero">
+    <p class="hero__prompt" aria-hidden="true">
+      <span class="hero__prompt-user">~/riji</span>
+      <span class="hero__prompt-caret">$</span>
+      <span class="hero__prompt-cmd">pnpm new "标题"</span>
+    </p>
+    <h1 class="hero__title">{siteInfo.title}</h1>
+    <p class="hero__slogan">{siteInfo.slogan}</p>
+    <p class="hero__stats">
+      <span><b>{entries.length}</b> 篇</span>
+      <span class="hero__stats-sep" aria-hidden="true"></span>
+      <span>起于 <b>{startText}</b></span>
+    </p>
+  </section>
+
+  {entries.length > 0 ? (
+    <div class="timeline">
+      {entries.map((entry) => (
+        <EntryCard entry={entry} summary={entry.data.summary || excerpt(entry.body ?? '')} />
+      ))}
+    </div>
+  ) : (
+    <p class="tl-empty">
+      还没有日记。<br />
+      在 <code>src/content/diary/</code> 里放一个 <code>YYYY-MM-DD-标题.md</code>，然后跑 <code>pnpm build</code>。
+    </p>
+  )}
+</Base>

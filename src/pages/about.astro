@@ -1,0 +1,24 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '@layouts/Base.astro';
+import Toc from '@components/Toc.astro';
+import { withBase } from '@utils/urls';
+
+const page = await getEntry('pages', 'about');
+if (!page) throw new Error('缺少 src/content/pages/about.md');
+
+const { Content, headings } = await render(page);
+---
+
+<Base title={page.data.title} description={page.data.description}>
+  <div class="post">
+    <article class="post__main">
+      <a class="back" href={withBase('')}>← 回到时间线</a>
+      <h1 class="post__title">{page.data.title}</h1>
+      <div class="post-content">
+        <Content />
+      </div>
+    </article>
+    <Toc headings={headings} />
+  </div>
+</Base>

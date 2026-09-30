@@ -1,0 +1,48 @@
+---
+import siteInfo from '@/config';
+import { withBase } from '@utils/urls';
+
+const path = Astro.url.pathname.replace(/\/+$/, '');
+const isAbout = path.endsWith('about');
+---
+
+<header class="header">
+  <div class="header__inner">
+    <a class="header__title" href={withBase('')}>{siteInfo.title}</a>
+    <span class="header__slogan">{siteInfo.slogan}</span>
+    <nav class="header__nav">
+      <a
+        class={`header__link${isAbout ? ' is-active' : ''}`}
+        href={withBase('about')}
+        aria-current={isAbout ? 'page' : undefined}
+      >
+        <span>关于</span>
+      </a>
+    </nav>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换深浅色">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2v2M12 20v2M4.2 4.2l1.5 1.5M18.3 18.3l1.5 1.5M2 12h2M20 12h2M4.2 19.8l1.5-1.5M18.3 5.7l1.5-1.5" />
+      </svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z" />
+      </svg>
+    </button>
+  </div>
+</header>
+
+<script is:inline>
+  (function () {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      try {
+        localStorage.setItem('theme', next);
+      } catch (e) {
+        /* 隐私模式下写不了，忽略即可 */
+      }
+    });
+  })();
+</script>

@@ -1,0 +1,17 @@
+{
+  "name": "ai-dev-diary",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI 开发日记 — 一个零后台、由 agent 自行提交的轻量静态站",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "new": "node script/new.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.13.7"
+  },
+  "packageManager": "pnpm@11.10.0"
+}

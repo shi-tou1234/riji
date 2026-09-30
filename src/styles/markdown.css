@@ -1,0 +1,170 @@
+/* =========================================================
+   正文排版（文章页 .post-content）
+   ========================================================= */
+
+.post-content {
+  font-size: 1.02rem;
+}
+
+.post-content > :first-child {
+  margin-top: 0;
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3,
+.post-content h4 {
+  font-family: var(--font-round);
+  font-weight: 400;
+  line-height: 1.5;
+  scroll-margin-top: calc(var(--header-height) + 24px);
+}
+
+.post-content h1 {
+  display: none; /* 标题已经在页头大字出现过，正文里再出一遍是重复 */
+}
+
+.post-content h2 {
+  margin: 2.4em 0 0.9em;
+  padding-bottom: 0.4em;
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-content h3 {
+  margin: 2em 0 0.7em;
+  font-size: 1.22rem;
+}
+
+.post-content h4 {
+  margin: 1.7em 0 0.6em;
+  font-size: 1.08rem;
+  color: var(--text-2);
+}
+
+.post-content p {
+  margin: 0 0 1.25em;
+}
+
+.post-content a {
+  color: var(--link);
+  border-bottom: 1px solid color-mix(in srgb, var(--link) 35%, transparent);
+}
+
+.post-content a:hover {
+  border-bottom-color: var(--link);
+}
+
+.post-content ul,
+.post-content ol {
+  margin: 0 0 1.25em;
+  padding-left: 1.5em;
+}
+
+.post-content li {
+  margin: 0.3em 0;
+}
+
+.post-content li > ul,
+.post-content li > ol {
+  margin: 0.3em 0;
+}
+
+.post-content blockquote {
+  margin: 1.5em 0;
+  padding: 0.4em 1.1em;
+  border-left: 3px solid var(--rail);
+  background-color: var(--code-bg);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-2);
+}
+
+.post-content blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.post-content hr {
+  margin: 2.6em 0;
+  border: none;
+  border-top: 1px dashed var(--border);
+}
+
+/* 行内代码 */
+.post-content :not(pre) > code {
+  padding: 0.15em 0.42em;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  word-break: break-word;
+}
+
+/* 代码块：背景色由 Shiki 内联给出，这里只管形状 */
+.post-content pre.astro-code {
+  margin: 1.5em 0;
+  padding: 1em 1.1em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.post-content pre.astro-code code {
+  font-family: var(--font-mono);
+}
+
+/* 表格：窄屏可横向滚动 */
+.post-content table {
+  display: block;
+  width: 100%;
+  margin: 1.5em 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.post-content th,
+.post-content td {
+  padding: 0.6em 0.9em;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.post-content th {
+  background-color: var(--code-bg);
+  font-family: var(--font-round);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.post-content tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--card) 55%, transparent);
+}
+
+/* 图片 */
+.post-content img {
+  display: block;
+  margin: 1.6em auto;
+  box-shadow: 0 4px 18px var(--shadow);
+}
+
+.post-content mark {
+  padding: 0.05em 0.3em;
+  background-color: var(--mark);
+  color: var(--text);
+  border-radius: 4px;
+}
+
+/* 任务列表 */
+.post-content input[type='checkbox'] {
+  margin-right: 0.45em;
+  accent-color: var(--link);
+  transform: translateY(1px);
+}
+
+.post-content li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -1.2em;
+}
