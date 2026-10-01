@@ -25,11 +25,35 @@
   display: none; /* 标题已经在页头大字出现过，正文里再出一遍是重复 */
 }
 
+/* 章节序号章：h2 前挂一枚歪斜的楷体数字小章（其一 其二 …） */
+.post-content {
+  counter-reset: sec;
+}
+
 .post-content h2 {
   margin: 2.4em 0 0.9em;
   padding-bottom: 0.4em;
   font-size: 1.38rem;
   border-bottom: 1px solid var(--line);
+  counter-increment: sec;
+}
+
+.post-content h2::before {
+  content: counter(sec, cjk-ideographic);
+  display: inline-grid;
+  place-items: center;
+  width: 1.55em;
+  height: 1.55em;
+  margin-right: 0.55em;
+  font-family: var(--font-kai);
+  font-size: 0.8em;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 4px;
+  transform: rotate(-3deg);
+  vertical-align: -0.3em;
 }
 
 .post-content h3 {
@@ -95,9 +119,19 @@
 }
 
 .post-content hr {
-  margin: 2.6em 0;
+  margin: 2.6em auto;
   border: none;
-  border-top: 1px dashed var(--line-strong);
+  text-align: center;
+}
+
+/* 分隔线改成三枚朱砂花点 */
+.post-content hr::after {
+  content: '· · ·';
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
 }
 
 /* 行内代码 */
@@ -192,6 +226,24 @@
   font-size: 2.7em;
   line-height: 1;
   color: var(--accent);
+}
+
+/* 文末落印：一篇读完，钤一枚「终」字 */
+.post-content::after {
+  content: '终';
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  margin: 3.2em auto 0;
+  background-color: var(--accent);
+  color: var(--paper-on-accent);
+  font-family: var(--font-kai);
+  font-size: 1.05rem;
+  line-height: 1;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--paper-on-accent) 55%, transparent);
+  transform: rotate(-4deg);
 }
 
 /* =========================================================

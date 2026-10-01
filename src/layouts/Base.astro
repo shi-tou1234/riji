@@ -198,12 +198,112 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
           });
         }
 
+        /* 首页月份选项卡：一屏只看一个月，切换带滑动指示线 */
+        function setupTabs() {
+          var nav = document.querySelector('.months');
+          if (!nav || nav.__wired) return;
+          nav.__wired = 1;
+          var row = nav.querySelector('.months__row');
+          var tabs = [].slice.call(nav.querySelectorAll('.months__tab'));
+          var ind = nav.querySelector('.months__indicator');
+          var sections = [].slice.call(document.querySelectorAll('.month'));
+          if (!tabs.length) return;
+
+          var move = function (t) {
+            if (!ind) return;
+            ind.style.width = t.offsetWidth + 'px';
+            ind.style.transform = 'translateX(' + t.offsetLeft + 'px)';
+          };
+
+          var select = function (t, scroll) {
+            tabs.forEach(function (x) {
+              var on = x === t;
+              x.classList.toggle('is-active', on);
+              x.setAttribute('aria-selected', on ? 'true' : 'false');
+              x.tabIndex = on ? 0 : -1;
+            });
+            var id = t.getAttribute('aria-controls');
+            sections.forEach(function (s) {
+              var on = s.id === id;
+              if (on && s.hidden) {
+                s.hidden = false;
+                /* 切换时整块轻抬一次 */
+                s.classList.remove('is-entering');
+                void s.offsetWidth;
+                s.classList.add('is-entering');
+                var h = s.querySelector('.index__month');
+                if (h) h.style.setProperty('--d', '0ms');
+              } else if (!on) {
+                s.hidden = true;
+              }
+            });
+            move(t);
+            t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'auto' });
+            if (scroll) {
+              var header = document.querySelector('.header');
+              var hh = header ? header.offsetHeight : 0;
+              var r = nav.getBoundingClientRect();
+              /* 还没滚到导航条时，切完把它带到顶栏正下方；已经吸住了就不动 */
+              if (r.top > hh + 2) {
+                window.scrollTo({
+                  top: window.scrollY + r.top - hh - 1,
+                  behavior: reduce ? 'auto' : 'smooth',
+                });
+              }
+            }
+          };
+
+          tabs.forEach(function (t) {
+            t.addEventListener('click', function (e) {
+              e.preventDefault();
+              select(t, true);
+              history.replaceState(null, '', '#' + t.getAttribute('aria-controls'));
+            });
+            t.addEventListener('keydown', function (e) {
+              var i = tabs.indexOf(t);
+              var n = null;
+              if (e.key === 'ArrowRight') n = tabs[(i + 1) % tabs.length];
+              else if (e.key === 'ArrowLeft') n = tabs[(i - 1 + tabs.length) % tabs.length];
+              else if (e.key === 'Home') n = tabs[0];
+              else if (e.key === 'End') n = tabs[tabs.length - 1];
+              if (n) {
+                e.preventDefault();
+                n.focus();
+                select(n, true);
+              }
+            });
+          });
+
+          /* 带 hash 进来时直达对应月份 */
+          var target = null;
+          var h = decodeURIComponent(location.hash || '');
+          tabs.forEach(function (t) {
+            if (h === '#' + t.getAttribute('aria-controls')) target = t;
+          });
+          select(target || tabs[0], false);
+
+          window.addEventListener(
+            'resize',
+            function () {
+              move(nav.querySelector('.months__tab.is-active'));
+            },
+            { passive: true }
+          );
+          if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function () {
+              var active = nav.querySelector('.months__tab.is-active');
+              if (active) move(active);
+            });
+          }
+        }
+
         function initAll() {
           setupReveals();
           countUp();
           setupProgress();
           setupSpy();
           setupCopy();
+          setupTabs();
         }
 
         /* ClientRouter 存在时 astro:page-load 首次加载也会触发 */

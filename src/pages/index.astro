@@ -32,19 +32,26 @@ const CN_MONTH = ['一', '二', '三', '四', '五', '六', '七', '八', '九',
 const cnMonth = (m: number) => CN_MONTH[m - 1];
 
 /** 按年月分组，相邻同月合到一枚题签下 */
-const groups = new Map<string, { label: string; entries: typeof entries }>();
+const groups = new Map<string, { year: number; month: number; label: string; entries: typeof entries }>();
 for (const entry of entries) {
   const d = entry.data.date;
   const key = `${d.getFullYear()}-${d.getMonth()}`;
   if (!groups.has(key)) {
     groups.set(key, {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
       label: `${cnNum(d.getFullYear())}年${cnMonth(d.getMonth() + 1)}月`,
       entries: [],
     });
   }
   groups.get(key)!.entries.push(entry);
 }
-const monthGroups = [...groups.values()];
+const monthGroups = [...groups.values()].map((g) => ({ ...g, key: `${g.year}-${g.month}` }));
+const latestYear = monthGroups[0]?.year ?? 0;
+
+/** 标签上的短标签：同年只写月份，跨了年份才带上年 */
+const tabLabel = (g: { year: number; month: number }) =>
+  g.year === latestYear ? cnMonth(g.month) : `${g.year}年${cnMonth(g.month)}`;
 
 /** 竖排题签按逗号断列（一个人，/ 和一整支 AI 队伍） */
 const sloganParts = siteInfo.slogan
@@ -80,18 +87,48 @@ const sloganParts = siteInfo.slogan
   </section>
 
   {
+    monthGroups.length > 1 && (
+      <nav class="months" aria-label="按月份浏览日记">
+        <div class="months__row" role="tablist">
+          {monthGroups.map((group, i) => (
+            <a
+              class={`months__tab${i === 0 ? ' is-active' : ''}`}
+              role="tab"
+              id={`tab-${group.key}`}
+              href={`#m-${group.key}`}
+              aria-controls={`m-${group.key}`}
+              aria-selected={i === 0 ? 'true' : 'false'}
+              tabindex={i === 0 ? 0 : -1}
+            >
+              {tabLabel(group)}
+              <span class="months__count">{group.entries.length}</span>
+            </a>
+          ))}
+          <span class="months__indicator" aria-hidden="true" />
+        </div>
+      </nav>
+    )
+  }
+
+  {
     monthGroups.length > 0 ? (
       <div class="index">
-        {monthGroups.map((group, gi) => (
-          <section aria-label={group.label}>
-            <h2 class="index__month" data-reveal style={`--d: ${420 + gi * 90}ms`}>
+        {monthGroups.map((group, i) => (
+          <section
+            class="month"
+            id={`m-${group.key}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${group.key}`}
+            hidden={i > 0}
+          >
+            <h2 class="index__month" data-reveal>
               {group.label}
             </h2>
-            {group.entries.map((entry, i) => (
+            {group.entries.map((entry, j) => (
               <EntryCard
                 entry={entry}
                 summary={entry.data.summary || excerpt(entry.body ?? '')}
-                delay={Math.min(520 + i * 70, 860)}
+                delay={Math.min(140 + j * 60, 700)}
               />
             ))}
           </section>
@@ -107,4 +144,8 @@ const sloganParts = siteInfo.slogan
       </p>
     )
   }
+
+  <noscript>
+    <style>{'.month[hidden] { display: block !important; } .months { display: none !important; }'}</style>
+  </noscript>
 </Base>

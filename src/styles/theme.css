@@ -86,6 +86,8 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-height) + 20px);
   -webkit-text-size-adjust: 100%;
+  /* 月份选项卡通栏用 100vw 贴边，别让 Windows 滚动条顶出横向滚动 */
+  overflow-x: clip;
 }
 
 body {
@@ -671,6 +673,106 @@ html:not(.js) .index__month::after {
 }
 
 /* =========================================================
+   月份选项卡：粘性导航条，一次只摊开一个月
+   ========================================================= */
+
+.months {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 80;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: 6px 4vw 10px;
+  background-color: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.months__row {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.months__row::-webkit-scrollbar {
+  display: none;
+}
+
+.months__tab {
+  flex: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 13px;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  border-radius: 8px 8px 0 0;
+  transition: color 0.2s var(--ease), background-color 0.2s var(--ease);
+}
+
+.months__tab:hover {
+  color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.months__tab:focus-visible {
+  outline-offset: -2px;
+}
+
+.months__tab.is-active {
+  color: var(--accent);
+}
+
+.months__count {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0;
+  color: var(--text-3);
+  transition: color 0.2s var(--ease);
+}
+
+.months__tab.is-active .months__count {
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+/* 滑动指示线：JS 就绪后才有，跟着激活标签走 */
+.months__indicator {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background-color: var(--accent);
+  border-radius: 2px;
+  transition: transform 0.35s var(--ease), width 0.35s var(--ease);
+}
+
+html.js .months__indicator {
+  display: block;
+}
+
+/* 切月时整块轻抬一次 */
+.month.is-entering {
+  animation: rise 0.5s var(--ease);
+}
+
+@media (max-width: 640px) {
+  .months {
+    top: calc(var(--header-height) - 1px);
+    padding-top: 4px;
+  }
+}
+
+/* =========================================================
    空状态 / 404：一张还没落笔的稿纸
    ========================================================= */
 
@@ -740,6 +842,7 @@ html:not(.js) .index__month::after {
 }
 
 .post__meta {
+  position: relative;
   margin: 0 0 34px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--line);
@@ -750,6 +853,25 @@ html:not(.js) .index__month::after {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
+}
+
+/* 发丝线上压一段朱砂重点线，像批注划过的 */
+.post__meta::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 56px;
+  height: 2px;
+  background-color: var(--accent);
+  border-radius: 2px;
+}
+
+.post__meta > * + *::before {
+  content: '·';
+  margin-right: 12px;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .post__meta time {
