@@ -1,4 +1,0 @@
-#!/bin/sh
-# pre-commit 钩子入口。真正的活儿都在 script/pre-commit.mjs 里。
-# Windows 上 git 走 git-bash 跑这个 sh 脚本，所以这里用 sh 语法而不是 PowerShell。
-exec node "$(git rev-parse --show-toplevel)/script/pre-commit.mjs"

@@ -1,5 +1,0 @@
-# git 钩子是 sh 脚本，Windows 上 autocrlf 会把它变成 CRLF，
-# 那样 `exec node ".../pre-commit.mjs"$'\r'` 会找不到模块，钩子直接哑掉。
-# 这几类文件强制走 LF，跟仓库怎么 checkout 无关。
-.githooks/** text eol=lf
-script/*.mjs text eol=lf
