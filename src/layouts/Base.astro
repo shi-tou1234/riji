@@ -198,7 +198,8 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
           });
         }
 
-        /* 首页月份选项卡：一屏只看一个月，切换带滑动指示线 */
+        /* 首页月份导航：手机是横向吸顶选项卡，桌面 ≥901px 是左侧竖排卷目。
+           切换带滑动指示线，#m-… 直达某月，#e-… 落回某一篇 */
         function setupTabs() {
           var nav = document.querySelector('.months');
           if (!nav || nav.__wired) return;
@@ -207,12 +208,37 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
           var tabs = [].slice.call(nav.querySelectorAll('.months__tab'));
           var ind = nav.querySelector('.months__indicator');
           var sections = [].slice.call(document.querySelectorAll('.month'));
+          var mq = window.matchMedia('(min-width: 901px)');
           if (!tabs.length) return;
 
           var move = function (t) {
             if (!ind) return;
-            ind.style.width = t.offsetWidth + 'px';
-            ind.style.transform = 'translateX(' + t.offsetLeft + 'px)';
+            row.setAttribute('aria-orientation', mq.matches ? 'vertical' : 'horizontal');
+            if (mq.matches) {
+              ind.style.width = '2px';
+              ind.style.height = t.offsetHeight + 'px';
+              ind.style.transform = 'translateY(' + t.offsetTop + 'px)';
+            } else {
+              ind.style.height = '2px';
+              ind.style.width = t.offsetWidth + 'px';
+              ind.style.transform = 'translateX(' + t.offsetLeft + 'px)';
+            }
+          };
+
+          /* 落到某一篇：先把它的入场动画钉住再量位置，滚到位后纸面闪一道朱砂 */
+          var landOnCard = function (card) {
+            var header = document.querySelector('.header');
+            var hh = header ? header.offsetHeight : 0;
+            card.style.transition = 'none';
+            card.style.setProperty('--d', '0ms');
+            card.classList.add('in');
+            void card.offsetWidth;
+            card.style.transition = '';
+            var y = card.getBoundingClientRect().top + window.scrollY - hh - 20;
+            window.scrollTo({ top: Math.max(0, y), behavior: reduce ? 'auto' : 'smooth' });
+            card.classList.remove('is-landed');
+            void card.offsetWidth;
+            card.classList.add('is-landed');
           };
 
           var select = function (t, scroll) {
@@ -242,13 +268,27 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
             if (scroll) {
               var header = document.querySelector('.header');
               var hh = header ? header.offsetHeight : 0;
-              var r = nav.getBoundingClientRect();
-              /* 还没滚到导航条时，切完把它带到顶栏正下方；已经吸住了就不动 */
-              if (r.top > hh + 2) {
-                window.scrollTo({
-                  top: window.scrollY + r.top - hh - 1,
-                  behavior: reduce ? 'auto' : 'smooth',
-                });
+              if (mq.matches) {
+                /* 桌面侧栏常驻：把列表顶部带到顶栏正下方 */
+                var list = document.querySelector('.index__list');
+                if (list) {
+                  var lr = list.getBoundingClientRect();
+                  if (lr.top > hh + 2 || lr.top < -40) {
+                    window.scrollTo({
+                      top: window.scrollY + lr.top - hh - 10,
+                      behavior: reduce ? 'auto' : 'smooth',
+                    });
+                  }
+                }
+              } else {
+                var r = nav.getBoundingClientRect();
+                /* 还没滚到导航条时，切完把它带到顶栏正下方；已经吸住了就不动 */
+                if (r.top > hh + 2) {
+                  window.scrollTo({
+                    top: window.scrollY + r.top - hh - 1,
+                    behavior: reduce ? 'auto' : 'smooth',
+                  });
+                }
               }
             }
           };
@@ -264,6 +304,8 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
               var n = null;
               if (e.key === 'ArrowRight') n = tabs[(i + 1) % tabs.length];
               else if (e.key === 'ArrowLeft') n = tabs[(i - 1 + tabs.length) % tabs.length];
+              else if (e.key === 'ArrowDown') n = tabs[(i + 1) % tabs.length];
+              else if (e.key === 'ArrowUp') n = tabs[(i - 1 + tabs.length) % tabs.length];
               else if (e.key === 'Home') n = tabs[0];
               else if (e.key === 'End') n = tabs[tabs.length - 1];
               if (n) {
@@ -274,13 +316,24 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
             });
           });
 
-          /* 带 hash 进来时直达对应月份 */
+          /* 带 hash 进来：#m-… 直达对应月份；#e-… 落回某一篇并点亮它所在的月份 */
           var target = null;
           var h = decodeURIComponent(location.hash || '');
           tabs.forEach(function (t) {
             if (h === '#' + t.getAttribute('aria-controls')) target = t;
           });
+          var card = null;
+          if (!target && h.slice(1, 3) === 'e-') {
+            card = document.getElementById(h.slice(1));
+            if (card) {
+              var sec = card.closest('.month');
+              var tab = sec ? nav.querySelector('[aria-controls="' + sec.id + '"]') : null;
+              if (tab) target = tab;
+              else card = null;
+            }
+          }
           select(target || tabs[0], false);
+          if (card) landOnCard(card);
 
           window.addEventListener(
             'resize',

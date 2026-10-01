@@ -567,6 +567,20 @@ html:not(.js) .index__month::after {
   border-top: 1px solid var(--line);
 }
 
+/* 从文章页回到时间线时落在那一篇上，纸面轻闪一道朱砂再散去 */
+.entry.is-landed .entry__link {
+  animation: land 1.8s var(--ease) both;
+}
+
+@keyframes land {
+  0% {
+    background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 .entry__link {
   display: grid;
   grid-template-columns: 60px minmax(0, 1fr);
@@ -689,6 +703,18 @@ html:not(.js) .index__month::after {
   border-bottom: 1px solid var(--line);
 }
 
+.months__label {
+  display: none;
+  margin: 0 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-kai);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.35em;
+  color: var(--text-3);
+}
+
 .months__row {
   position: relative;
   display: flex;
@@ -744,7 +770,8 @@ html:not(.js) .index__month::after {
   opacity: 0.7;
 }
 
-/* 滑动指示线：JS 就绪后才有，跟着激活标签走 */
+/* 滑动指示线：JS 就绪后才有，跟着激活标签走。
+   手机是底部横线，桌面侧栏变成左侧竖线（方向由 JS 按断点写入宽高和位移） */
 .months__indicator {
   display: none;
   position: absolute;
@@ -753,7 +780,7 @@ html:not(.js) .index__month::after {
   height: 2px;
   background-color: var(--accent);
   border-radius: 2px;
-  transition: transform 0.35s var(--ease), width 0.35s var(--ease);
+  transition: transform 0.35s var(--ease), width 0.35s var(--ease), height 0.35s var(--ease);
 }
 
 html.js .months__indicator {
@@ -769,6 +796,67 @@ html.js .months__indicator {
   .months {
     top: calc(var(--header-height) - 1px);
     padding-top: 4px;
+  }
+}
+
+/* =========================================================
+   首页 · 月份侧栏（桌面）：横向选项卡在 ≥901px 退位成
+   常驻左侧的竖排「卷目」，右侧列表跟着变宽
+   ========================================================= */
+
+@media (min-width: 901px) {
+  .index:has(> .months) {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 12px 44px;
+    align-items: start;
+    max-width: var(--wide-width);
+  }
+
+  .months {
+    position: sticky;
+    top: calc(var(--header-height) + 28px);
+    align-self: start;
+    z-index: 5;
+    width: auto;
+    max-height: calc(100vh - var(--header-height) - 56px);
+    margin-left: 0;
+    padding: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 0;
+  }
+
+  .months__label {
+    display: block;
+  }
+
+  .months__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    max-width: none;
+    margin: 0;
+    overflow: visible;
+  }
+
+  .months__tab {
+    justify-content: space-between;
+    padding: 8px 10px 8px 15px;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .months__name {
+    letter-spacing: 0.08em;
+  }
+
+  .months__indicator {
+    top: 0;
+    bottom: auto;
+    width: 2px;
   }
 }
 
@@ -876,6 +964,63 @@ html.js .months__indicator {
 
 .post__meta time {
   color: var(--accent);
+}
+
+/* 上一篇 / 下一篇：读完一篇顺手翻日，不必退回时间线 */
+.post__pn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.pn {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 16px;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background-color: color-mix(in srgb, var(--card) 65%, transparent);
+}
+
+.pn:hover {
+  color: inherit;
+  border-color: var(--line-strong);
+  background-color: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.pn__dir {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+.pn__title {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.pn__date {
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+
+.pn--next {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* 缺位的那半边占住格子，保持两端对齐的版式 */
+.pn--none {
+  visibility: hidden;
 }
 
 /* 目录 */
@@ -1164,6 +1309,10 @@ html[data-vt='theme']::view-transition-new(root) {
   .entry__title {
     font-size: 1.06rem;
   }
+
+  .post__pn {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* =========================================================
@@ -1179,6 +1328,10 @@ html[data-vt='theme']::view-transition-new(root) {
   .hero__seal,
   .hero__kicker::before,
   .hero__kicker::after {
+    animation: none;
+  }
+
+  .entry.is-landed .entry__link {
     animation: none;
   }
 

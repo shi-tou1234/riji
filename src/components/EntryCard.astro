@@ -6,18 +6,20 @@ import { withBase } from '@utils/urls';
 interface Props {
   entry: CollectionEntry<'diary'>;
   summary: string;
+  /** 锚点 id：文章页「回到时间线」靠它落回原来那一篇 */
+  id?: string;
   /** 入场动画的延迟（毫秒），按目录顺序递增 */
   delay?: number;
 }
 
-const { entry, summary, delay = 0 } = Astro.props;
+const { entry, summary, id, delay = 0 } = Astro.props;
 const date = entry.data.date;
 const minutes = readingTime(entry.body ?? '');
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const pad = (n: number) => String(n).padStart(2, '0');
 ---
 
-<article class="entry" data-reveal style={`--d: ${delay}ms`}>
+<article class="entry" id={id} data-reveal style={`--d: ${delay}ms`}>
   <a class="entry__link" href={withBase(`d/${entry.id}/`)}>
     <div class="entry__when">
       <span class="entry__day">{pad(date.getDate())}</span>

@@ -2,26 +2,41 @@
 import { getCollection, render } from 'astro:content';
 import Base from '@layouts/Base.astro';
 import Toc from '@components/Toc.astro';
-import { formatDateCN, readingTime, excerpt } from '@utils/format';
+import { formatDateCN, readingTime, excerpt, cnMonthLabel } from '@utils/format';
 import { withBase } from '@utils/urls';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('diary', ({ data }) => !data.draft);
-  return entries.map((entry) => ({
+  const entries = (await getCollection('diary', ({ data }) => !data.draft)).sort(
+    (a, b) => a.data.date.valueOf() - b.data.date.valueOf(),
+  );
+  const latestYear = entries.at(-1)?.data.date.getFullYear() ?? 0;
+  return entries.map((entry, i) => ({
     params: { slug: entry.id },
-    props: { entry },
+    props: {
+      entry,
+      older: entries[i - 1] ?? null,
+      newer: entries[i + 1] ?? null,
+      latestYear,
+    },
   }));
 }
 
-const { entry } = Astro.props;
+const { entry, older, newer, latestYear } = Astro.props;
 const { Content, headings } = await render(entry);
 const minutes = readingTime(entry.body ?? '');
+
+/** 返回链接要写明落点：九月 / 2025年三月 */
+const backLabel = cnMonthLabel(
+  entry.data.date.getFullYear(),
+  entry.data.date.getMonth() + 1,
+  latestYear,
+);
 ---
 
 <Base title={entry.data.title} description={entry.data.summary || excerpt(entry.body ?? '', 60)}>
   <div class="post">
     <article class="post__main" data-reveal>
-      <a class="back" href={withBase('')}>← 回到时间线</a>
+      <a class="back" href={withBase(`#e-${entry.id}`)}>← 回到{backLabel}</a>
       <h1 class="post__title">{entry.data.title}</h1>
       <p class="post__meta">
         <time datetime={entry.data.date.toISOString()}>{formatDateCN(entry.data.date)}</time>
@@ -30,6 +45,31 @@ const minutes = readingTime(entry.body ?? '');
       <div class="post-content">
         <Content />
       </div>
+
+      {
+        (older || newer) && (
+          <nav class="post__pn" aria-label="翻到上一篇或下一篇">
+            {older ? (
+              <a class="pn" href={withBase(`d/${older.id}/`)}>
+                <span class="pn__dir">← 上一篇</span>
+                <span class="pn__title">{older.data.title}</span>
+                <span class="pn__date">{formatDateCN(older.data.date)}</span>
+              </a>
+            ) : (
+              <span class="pn pn--none" aria-hidden="true" />
+            )}
+            {newer ? (
+              <a class="pn pn--next" href={withBase(`d/${newer.id}/`)}>
+                <span class="pn__dir">下一篇 →</span>
+                <span class="pn__title">{newer.data.title}</span>
+                <span class="pn__date">{formatDateCN(newer.data.date)}</span>
+              </a>
+            ) : (
+              <span class="pn pn--none" aria-hidden="true" />
+            )}
+          </nav>
+        )
+      }
     </article>
     <Toc headings={headings} />
   </div>
