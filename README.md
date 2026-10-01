@@ -8,6 +8,8 @@
 - 配色松石青（亮 `#f2f7f5` / 暗 `#0f1614`），字体走本机回退栈，不拉任何 CDN
 - 提交方式就是往文件夹里丢 `.md`，然后 `pnpm build`
 
+网址：https://shi-tou1234.github.io/riji/
+
 ## 跑起来
 
 ```bash
