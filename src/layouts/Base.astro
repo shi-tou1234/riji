@@ -1,6 +1,7 @@
 ---
 import '@styles/theme.css';
 import '@styles/markdown.css';
+import { ClientRouter } from 'astro:transitions';
 import Header from '@components/Header.astro';
 import siteInfo from '@/config';
 import { withBase } from '@utils/urls';
@@ -23,28 +24,192 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
-    <meta name="theme-color" content="#f2f7f5" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f1614" media="(prefers-color-scheme: dark)" />
-    {/* 主题必须在首屏绘制前定好，否则会闪一下白 */}
+    <meta name="theme-color" content="#f5f0e6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#191512" media="(prefers-color-scheme: dark)" />
+    <ClientRouter />
+    {/* 主题和 js 标记必须在首屏绘制前定好；View Transitions 换页会替换 <html> 的属性，
+        所以astro:after-swap 时要再补一遍，否则换页后主题丢失、滚动入场元素永远隐藏 */}
     <script is:inline>
       (function () {
-        try {
-          var saved = localStorage.getItem('theme');
-          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          document.documentElement.dataset.theme = saved || (dark ? 'dark' : 'light');
-        } catch (e) {
-          document.documentElement.dataset.theme = 'light';
-        }
+        var apply = function () {
+          try {
+            var saved = localStorage.getItem('theme');
+            var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.dataset.theme = saved || (dark ? 'dark' : 'light');
+          } catch (e) {
+            document.documentElement.dataset.theme = 'light';
+          }
+          document.documentElement.classList.add('js');
+        };
+        apply();
+        document.addEventListener('astro:after-swap', apply);
       })();
     </script>
   </head>
   <body>
+    <div class="progress" id="progress" aria-hidden="true"></div>
     <Header />
     <main>
       <slot />
     </main>
     <footer class="footer">
+      <span class="footer__mark" aria-hidden="true"></span>
       <p>{siteInfo.title} · 由 {siteInfo.author} 与他的 agent 们共同书写</p>
     </footer>
+
+    <script is:inline>
+      (function () {
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* 滚动入场：带 data-reveal 的元素进入视口时落位。
+           首屏批次沿用各自的 --d 做编排，之后滚到的立即出现，不再傻等延迟 */
+        function setupReveals() {
+          var els = document.querySelectorAll('[data-reveal]:not(.in)');
+          if (!els.length) return;
+          if (reduce || !('IntersectionObserver' in window)) {
+            els.forEach(function (el) {
+              el.classList.add('in');
+            });
+            return;
+          }
+          var t0 = performance.now();
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (en) {
+                if (!en.isIntersecting) return;
+                if (performance.now() - t0 > 900) en.target.style.setProperty('--d', '0ms');
+                en.target.classList.add('in');
+                io.unobserve(en.target);
+              });
+            },
+            { threshold: 0.1, rootMargin: '0px 0px -6% 0px' }
+          );
+          els.forEach(function (el) {
+            if (!el.__rev) {
+              el.__rev = 1;
+              io.observe(el);
+            }
+          });
+        }
+
+        /* 首页统计数字滚动：SSR 直出终值，无 JS 时数字原样 */
+        function countUp() {
+          document.querySelectorAll('[data-count]').forEach(function (el) {
+            if (el.__counted) return;
+            el.__counted = 1;
+            var target = parseInt(el.dataset.count, 10);
+            if (isNaN(target) || reduce || target <= 0) return;
+            var t0 = null;
+            function step(t) {
+              if (!t0) t0 = t;
+              var p = Math.min(1, (t - t0) / 900);
+              el.textContent = String(Math.round(target * (1 - Math.pow(1 - p, 3))));
+              if (p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+          });
+        }
+
+        /* 文章页：阅读进度条 */
+        function setupProgress() {
+          var bar = document.getElementById('progress');
+          if (!bar) return;
+          if (!document.querySelector('.post')) {
+            bar.hidden = true;
+            return;
+          }
+          bar.hidden = false;
+          var ticking = false;
+          var update = function () {
+            ticking = false;
+            var h = document.documentElement;
+            var max = h.scrollHeight - h.clientHeight;
+            bar.style.transform = 'scaleX(' + (max > 0 ? h.scrollTop / max : 0) + ')';
+          };
+          if (!bar.__wired) {
+            bar.__wired = 1;
+            window.addEventListener(
+              'scroll',
+              function () {
+                if (!ticking) {
+                  ticking = true;
+                  requestAnimationFrame(update);
+                }
+              },
+              { passive: true }
+            );
+            window.addEventListener('resize', update, { passive: true });
+          }
+          update();
+        }
+
+        /* 文章页：目录跟随高亮 */
+        function setupSpy() {
+          var links = document.querySelectorAll('.toc__link');
+          if (!links.length) return;
+          var heads = [];
+          links.forEach(function (l) {
+            var id = decodeURIComponent((l.getAttribute('href') || '').slice(1));
+            var h = id && document.getElementById(id);
+            if (h) heads.push({ h: h, l: l });
+          });
+          if (!heads.length || !('IntersectionObserver' in window)) return;
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (en) {
+                if (!en.isIntersecting) return;
+                links.forEach(function (l) {
+                  l.classList.toggle('is-active', l === en.target.__link);
+                });
+              });
+            },
+            { rootMargin: '-12% 0px -72% 0px', threshold: 0 }
+          );
+          heads.forEach(function (it) {
+            it.h.__link = it.l;
+            io.observe(it.h);
+          });
+        }
+
+        /* 代码块复制按钮 */
+        function setupCopy() {
+          if (!navigator.clipboard) return;
+          document.querySelectorAll('.post-content pre.astro-code').forEach(function (pre) {
+            if (pre.closest('.code-wrap')) return;
+            var wrap = document.createElement('div');
+            wrap.className = 'code-wrap';
+            pre.parentNode.insertBefore(wrap, pre);
+            wrap.appendChild(pre);
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'copy-btn';
+            btn.textContent = '复制';
+            btn.addEventListener('click', function () {
+              navigator.clipboard.writeText(pre.innerText).then(function () {
+                btn.textContent = '已复制';
+                btn.classList.add('is-copied');
+                setTimeout(function () {
+                  btn.textContent = '复制';
+                  btn.classList.remove('is-copied');
+                }, 1600);
+              });
+            });
+            wrap.appendChild(btn);
+          });
+        }
+
+        function initAll() {
+          setupReveals();
+          countUp();
+          setupProgress();
+          setupSpy();
+          setupCopy();
+        }
+
+        /* ClientRouter 存在时 astro:page-load 首次加载也会触发 */
+        document.addEventListener('astro:page-load', initAll);
+        initAll();
+      })();
+    </script>
   </body>
 </html>

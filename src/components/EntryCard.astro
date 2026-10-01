@@ -6,27 +6,30 @@ import { withBase } from '@utils/urls';
 interface Props {
   entry: CollectionEntry<'diary'>;
   summary: string;
+  /** 入场动画的延迟（毫秒），按目录顺序递增 */
+  delay?: number;
 }
 
-const { entry, summary } = Astro.props;
+const { entry, summary, delay = 0 } = Astro.props;
 const date = entry.data.date;
 const minutes = readingTime(entry.body ?? '');
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 const pad = (n: number) => String(n).padStart(2, '0');
 ---
 
-<article class="tl-item">
-  <a class="tl-card" href={withBase(`d/${entry.id}/`)}>
-    <p class="tl-card__date">
-      <span class="tl-card__day">{pad(date.getDate())}</span>
-      <span>{date.getFullYear()} · {pad(date.getMonth() + 1)}</span>
-      <span class="tl-card__week">{WEEKDAYS[date.getDay()]}</span>
-    </p>
-    <h2 class="tl-card__title">{entry.data.title}</h2>
-    {summary && <p class="tl-card__summary">{summary}</p>}
-    <p class="tl-card__foot">
-      <span>约 {minutes} 分钟</span>
-      <span class="tl-card__arrow" aria-hidden="true">→</span>
-    </p>
+<article class="entry" data-reveal style={`--d: ${delay}ms`}>
+  <a class="entry__link" href={withBase(`d/${entry.id}/`)}>
+    <div class="entry__when">
+      <span class="entry__day">{pad(date.getDate())}</span>
+      <span class="entry__week">{WEEKDAYS[date.getDay()]}</span>
+    </div>
+    <div class="entry__body">
+      <h2 class="entry__title">{entry.data.title}</h2>
+      {summary && <p class="entry__summary">{summary}</p>}
+      <p class="entry__meta">
+        <span>约 {minutes} 分钟</span>
+        <span class="entry__arrow" aria-hidden="true">→</span>
+      </p>
+    </div>
   </a>
 </article>

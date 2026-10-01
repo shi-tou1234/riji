@@ -9,38 +9,98 @@ const entries = (await getCollection('diary', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
 );
 
-const first = entries.at(-1);
-const startText = first
-  ? `${first.data.date.getFullYear()}.${String(first.data.date.getMonth() + 1).padStart(2, '0')}`
-  : siteInfo.createdAt.replaceAll('-', '.');
+const pad = (n: number) => String(n).padStart(2, '0');
+const ym = (d: Date) => `${d.getFullYear()}.${pad(d.getMonth() + 1)}`;
+
+/** 起于：最早那篇的日期；一篇都没有就退回建站日期 */
+const startDate = entries.at(-1)?.data.date ?? new Date(siteInfo.createdAt);
+
+/** 累计字数（不含空白），够多就折成 k */
+const totalChars = entries.reduce((sum, e) => sum + (e.body ?? '').replace(/\s/g, '').length, 0);
+const charText = totalChars >= 1000 ? `${(totalChars / 1000).toFixed(1)}k` : String(totalChars);
+
+/** 中文数字：目录题签用（2026.9 → 二〇二六年九月） */
+const CN = '〇一二三四五六七八九';
+const cnNum = (n: number) =>
+  String(n)
+    .split('')
+    .map((d) => CN[Number(d)])
+    .join('');
+
+/** 按年月分组，相邻同月合到一枚题签下 */
+const groups = new Map<string, { label: string; entries: typeof entries }>();
+for (const entry of entries) {
+  const d = entry.data.date;
+  const key = `${d.getFullYear()}-${d.getMonth()}`;
+  if (!groups.has(key)) {
+    groups.set(key, {
+      label: `${cnNum(d.getFullYear())}年${cnNum(d.getMonth() + 1)}月`,
+      entries: [],
+    });
+  }
+  groups.get(key)!.entries.push(entry);
+}
+const monthGroups = [...groups.values()];
+
+/** 竖排题签按逗号断列（一个人，/ 和一整支 AI 队伍） */
+const sloganParts = siteInfo.slogan
+  .split('，')
+  .map((part, i, arr) => (i < arr.length - 1 ? `${part}，` : part))
+  .filter(Boolean);
 ---
 
 <Base>
   <section class="hero">
-    <p class="hero__prompt" aria-hidden="true">
-      <span class="hero__prompt-user">~/riji</span>
-      <span class="hero__prompt-caret">$</span>
-      <span class="hero__prompt-cmd">pnpm new "标题"</span>
+    <p class="hero__kicker reveal" style="--d: 0ms" aria-hidden="true">
+      <span>Dev Log · Human × Agents</span>
     </p>
-    <h1 class="hero__title">{siteInfo.title}</h1>
-    <p class="hero__slogan">{siteInfo.slogan}</p>
-    <p class="hero__stats">
-      <span><b>{entries.length}</b> 篇</span>
-      <span class="hero__stats-sep" aria-hidden="true"></span>
-      <span>起于 <b>{startText}</b></span>
-    </p>
+
+    <div class="hero__mast">
+      <h1 class="hero__title reveal" style="--d: 70ms">
+        <span class="hero__title-ai">AI</span>
+        <span>开发日记</span>
+        <span class="hero__seal" aria-hidden="true">记</span>
+      </h1>
+      <p class="hero__slogan reveal" style="--d: 160ms">
+        {sloganParts.map((part) => <span>{part}</span>)}
+      </p>
+    </div>
+
+    <ul class="hero__stats reveal" style="--d: 240ms">
+      <li class="hero__stat"><b data-count={entries.length}>{entries.length}</b>篇</li>
+      <li class="hero__stat">
+        <b data-count={totalChars < 1000 ? totalChars : undefined}>{charText}</b>字
+      </li>
+      <li class="hero__stat">起于<b>{ym(startDate)}</b></li>
+    </ul>
   </section>
 
-  {entries.length > 0 ? (
-    <div class="timeline">
-      {entries.map((entry) => (
-        <EntryCard entry={entry} summary={entry.data.summary || excerpt(entry.body ?? '')} />
-      ))}
-    </div>
-  ) : (
-    <p class="tl-empty">
-      还没有日记。<br />
-      在 <code>src/content/diary/</code> 里放一个 <code>YYYY-MM-DD-标题.md</code>，然后跑 <code>pnpm build</code>。
-    </p>
-  )}
+  {
+    monthGroups.length > 0 ? (
+      <div class="index">
+        {monthGroups.map((group, gi) => (
+          <section aria-label={group.label}>
+            <h2 class="index__month" data-reveal style={`--d: ${420 + gi * 90}ms`}>
+              {group.label}
+            </h2>
+            {group.entries.map((entry, i) => (
+              <EntryCard
+                entry={entry}
+                summary={entry.data.summary || excerpt(entry.body ?? '')}
+                delay={Math.min(520 + i * 70, 860)}
+              />
+            ))}
+          </section>
+        ))}
+      </div>
+    ) : (
+      <p class="tl-empty" data-reveal style="--d: 420ms">
+        还没有日记。
+        <br />
+        在 <code>src/content/diary/</code> 里放一个 <code>YYYY-MM-DD-标题.md</code>
+        <br />
+        然后跑 <code>pnpm new</code> 起草，或直接 <code>pnpm build</code> 上线。
+      </p>
+    )
+  }
 </Base>

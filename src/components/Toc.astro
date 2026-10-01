@@ -11,7 +11,7 @@ const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
 ---
 
 {items.length > 1 && (
-  <nav class="toc" aria-label="目录">
+  <nav class="toc" aria-label="目录" data-reveal style="--d: 140ms">
     <p class="toc__label">目录</p>
     <ul class="toc__list">
       {items.map((h) => (

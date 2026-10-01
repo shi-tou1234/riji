@@ -3,7 +3,7 @@
    ========================================================= */
 
 .post-content {
-  font-size: 1.02rem;
+  font-size: 1rem;
 }
 
 .post-content > :first-child {
@@ -14,9 +14,10 @@
 .post-content h2,
 .post-content h3,
 .post-content h4 {
-  font-family: var(--font-round);
-  font-weight: 400;
-  line-height: 1.5;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  line-height: 1.55;
+  letter-spacing: 0.03em;
   scroll-margin-top: calc(var(--header-height) + 24px);
 }
 
@@ -27,18 +28,24 @@
 .post-content h2 {
   margin: 2.4em 0 0.9em;
   padding-bottom: 0.4em;
-  font-size: 1.5rem;
-  border-bottom: 1px solid var(--border);
+  font-size: 1.38rem;
+  border-bottom: 1px solid var(--line);
 }
 
 .post-content h3 {
   margin: 2em 0 0.7em;
-  font-size: 1.22rem;
+  font-size: 1.16rem;
+}
+
+.post-content h3::before {
+  content: '·';
+  margin-right: 0.4em;
+  color: var(--accent);
 }
 
 .post-content h4 {
   margin: 1.7em 0 0.6em;
-  font-size: 1.08rem;
+  font-size: 1.02rem;
   color: var(--text-2);
 }
 
@@ -47,12 +54,12 @@
 }
 
 .post-content a {
-  color: var(--link);
-  border-bottom: 1px solid color-mix(in srgb, var(--link) 35%, transparent);
+  color: var(--accent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .post-content a:hover {
-  border-bottom-color: var(--link);
+  border-bottom-color: var(--accent);
 }
 
 .post-content ul,
@@ -70,11 +77,15 @@
   margin: 0.3em 0;
 }
 
+.post-content li::marker {
+  color: var(--accent);
+}
+
 .post-content blockquote {
   margin: 1.5em 0;
   padding: 0.4em 1.1em;
-  border-left: 3px solid var(--rail);
-  background-color: var(--code-bg);
+  border-left: 3px solid var(--accent);
+  background-color: color-mix(in srgb, var(--bg-soft) 60%, transparent);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--text-2);
 }
@@ -86,7 +97,7 @@
 .post-content hr {
   margin: 2.6em 0;
   border: none;
-  border-top: 1px dashed var(--border);
+  border-top: 1px dashed var(--line-strong);
 }
 
 /* 行内代码 */
@@ -94,8 +105,9 @@
   padding: 0.15em 0.42em;
   font-family: var(--font-mono);
   font-size: 0.88em;
+  color: var(--accent-deep);
   background-color: var(--code-bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 5px;
   word-break: break-word;
 }
@@ -105,9 +117,9 @@
   margin: 1.5em 0;
   padding: 1em 1.1em;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   overflow-x: auto;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   line-height: 1.7;
 }
 
@@ -122,25 +134,25 @@
   margin: 1.5em 0;
   overflow-x: auto;
   border-collapse: collapse;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .post-content th,
 .post-content td {
   padding: 0.6em 0.9em;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   text-align: left;
 }
 
 .post-content th {
   background-color: var(--code-bg);
-  font-family: var(--font-round);
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .post-content tbody tr:nth-child(even) {
-  background-color: color-mix(in srgb, var(--card) 55%, transparent);
+  background-color: color-mix(in srgb, var(--bg-soft) 45%, transparent);
 }
 
 /* 图片 */
@@ -160,11 +172,70 @@
 /* 任务列表 */
 .post-content input[type='checkbox'] {
   margin-right: 0.45em;
-  accent-color: var(--link);
+  accent-color: var(--accent);
   transform: translateY(1px);
 }
 
 .post-content li:has(> input[type='checkbox']) {
   list-style: none;
   margin-left: -1.2em;
+}
+
+/* =========================================================
+   首段首字下沉：楷体朱砂，像旧刊物的篇首
+   ========================================================= */
+
+.post-content > p:first-of-type::first-letter {
+  float: left;
+  margin: 0.1em 0.16em 0 0;
+  font-family: var(--font-kai);
+  font-size: 2.7em;
+  line-height: 1;
+  color: var(--accent);
+}
+
+/* =========================================================
+   代码块复制按钮（由 Base.astro 的脚本注入）
+   ========================================================= */
+
+.code-wrap {
+  position: relative;
+}
+
+.code-wrap .copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 4px 11px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: var(--text-2);
+  background-color: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease), color 0.22s var(--ease),
+    border-color 0.22s var(--ease);
+}
+
+.code-wrap:hover .copy-btn,
+.copy-btn:focus-visible,
+.copy-btn.is-copied {
+  opacity: 1;
+  transform: none;
+}
+
+.copy-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.copy-btn.is-copied {
+  color: var(--accent);
+  border-color: var(--accent);
 }

@@ -12,7 +12,7 @@ const { Content, headings } = await render(page);
 
 <Base title={page.data.title} description={page.data.description}>
   <div class="post">
-    <article class="post__main">
+    <article class="post__main" data-reveal>
       <a class="back" href={withBase('')}>← 回到时间线</a>
       <h1 class="post__title">{page.data.title}</h1>
       <div class="post-content">

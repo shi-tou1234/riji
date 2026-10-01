@@ -6,17 +6,19 @@ const path = Astro.url.pathname.replace(/\/+$/, '');
 const isAbout = path.endsWith('about');
 ---
 
-<header class="header">
+<header class="header" transition:persist>
   <div class="header__inner">
-    <a class="header__title" href={withBase('')}>{siteInfo.title}</a>
-    <span class="header__slogan">{siteInfo.slogan}</span>
+    <a class="header__brand" href={withBase('')}>
+      <span class="header__seal" aria-hidden="true">记</span>
+      <span class="header__title">{siteInfo.title}</span>
+    </a>
     <nav class="header__nav">
       <a
         class={`header__link${isAbout ? ' is-active' : ''}`}
         href={withBase('about')}
         aria-current={isAbout ? 'page' : undefined}
       >
-        <span>关于</span>
+        关于
       </a>
     </nav>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换深浅色">
@@ -32,17 +34,48 @@ const isAbout = path.endsWith('about');
 </header>
 
 <script is:inline>
-  (function () {
-    var btn = document.getElementById('theme-toggle');
+  /* 挂在 document 上做事件委托：View Transitions 换页后按钮是新的，监听器不用重挂 */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('#theme-toggle');
     if (!btn) return;
-    btn.addEventListener('click', function () {
-      var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    var apply = function () {
       document.documentElement.dataset.theme = next;
       try {
         localStorage.setItem('theme', next);
-      } catch (e) {
+      } catch (err) {
         /* 隐私模式下写不了，忽略即可 */
       }
+    };
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduce) {
+      apply();
+      return;
+    }
+    /* 以按钮为圆心把新主题「晕」开 */
+    var rect = btn.getBoundingClientRect();
+    var x = rect.left + rect.width / 2;
+    var y = rect.top + rect.height / 2;
+    var r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    document.documentElement.dataset.vt = 'theme';
+    var vt = document.startViewTransition(apply);
+    vt.ready.then(function () {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            'circle(0px at ' + x + 'px ' + y + 'px)',
+            'circle(' + r + 'px at ' + x + 'px ' + y + 'px)',
+          ],
+        },
+        {
+          duration: 480,
+          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        }
+      );
     });
-  })();
+    vt.finished.finally(function () {
+      delete document.documentElement.dataset.vt;
+    });
+  });
 </script>
