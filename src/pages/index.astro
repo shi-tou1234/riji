@@ -4,6 +4,7 @@ import Base from '@layouts/Base.astro';
 import EntryCard from '@components/EntryCard.astro';
 import siteInfo from '@/config';
 import { excerpt, cnNum, cnMonth, cnMonthLabel } from '@utils/format';
+import { withBase } from '@utils/urls';
 
 const entries = (await getCollection('diary', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
@@ -63,6 +64,15 @@ const sloganParts = siteInfo.slogan
         {sloganParts.map((part) => <span>{part}</span>)}
       </p>
     </div>
+
+    <img
+      class="hero__art reveal"
+      style="--d: 300ms"
+      src={withBase('assets/study-corner.png')}
+      alt=""
+      aria-hidden="true"
+      loading="eager"
+    />
 
     <ul class="hero__stats reveal" style="--d: 240ms">
       <li class="hero__stat"><b data-count={entries.length}>{entries.length}</b>篇</li>

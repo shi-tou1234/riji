@@ -6,6 +6,37 @@
   font-size: 1rem;
 }
 
+/* =========================================================
+   朱丝栏：宽屏时在正文两侧各坠一道极淡的朱砂竖线，
+   像信笺的界栏，把一篇日记圈成一张纸。窄屏收掉，别跟内容抢地。
+   注意 .post-content::after 已被「终」字印章占用，界栏挂在外层纸上。
+   ========================================================= */
+
+@media (min-width: 1000px) {
+  .post__main {
+    position: relative;
+  }
+
+  .post__main::before,
+  .post__main::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    bottom: 4px;
+    width: 1px;
+    background-color: color-mix(in srgb, var(--accent) 26%, transparent);
+    pointer-events: none;
+  }
+
+  .post__main::before {
+    left: -30px;
+  }
+
+  .post__main::after {
+    right: -30px;
+  }
+}
+
 .post-content > :first-child {
   margin-top: 0;
 }
@@ -106,12 +137,29 @@
 }
 
 .post-content blockquote {
+  position: relative;
   margin: 1.5em 0;
-  padding: 0.4em 1.1em;
+  padding: 0.7em 1.2em;
+  border: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
   border-left: 3px solid var(--accent);
-  background-color: color-mix(in srgb, var(--bg-soft) 60%, transparent);
+  background-color: color-mix(in srgb, var(--card) 80%, transparent);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--text-2);
+  /* 题记批注一律用楷体——和宋体正文一对照，「这是抄录的话」就明白了 */
+  font-family: var(--font-kai);
+  font-size: 1.01rem;
+}
+
+/* 左竖线顶端压一小段横笔，像批注的起笔 */
+.post-content blockquote::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -1px;
+  width: 30px;
+  height: 2px;
+  background-color: var(--accent);
+  border-radius: 2px;
 }
 
 .post-content blockquote > :last-child {
@@ -146,12 +194,15 @@
   word-break: break-word;
 }
 
-/* 代码块：背景色由 Shiki 内联给出，这里只管形状 */
+/* 代码块：背景色由 Shiki 内联给出，这里只管形状。
+   外圈再裱一道细线（outline 不占布局），像册页里贴的一张笺 */
 .post-content pre.astro-code {
   margin: 1.5em 0;
   padding: 1em 1.1em;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
+  outline: 1px solid color-mix(in srgb, var(--line) 52%, transparent);
+  outline-offset: 3px;
   overflow-x: auto;
   font-size: 0.86rem;
   line-height: 1.7;
@@ -221,11 +272,15 @@
 
 .post-content > p:first-of-type::first-letter {
   float: left;
-  margin: 0.1em 0.16em 0 0;
+  margin: 0.08em 0.18em 0 0;
+  padding: 0.04em 0.1em 0.06em 0.12em;
   font-family: var(--font-kai);
   font-size: 2.7em;
   line-height: 1;
   color: var(--accent);
+  /* 篇首字下垫一层淡墨底，像界格里的第一个字 */
+  background-color: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-radius: var(--radius-sm);
 }
 
 /* 文末落印：一篇读完，钤一枚「终」字 */

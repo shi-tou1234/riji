@@ -25,7 +25,7 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
     <meta name="theme-color" content="#f5f0e6" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#191512" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#1c1712" media="(prefers-color-scheme: dark)" />
     <ClientRouter />
     {/* 主题和 js 标记必须在首屏绘制前定好；View Transitions 换页会替换 <html> 的属性，
         所以astro:after-swap 时要再补一遍，否则换页后主题丢失、滚动入场元素永远隐藏 */}
