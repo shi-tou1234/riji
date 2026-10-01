@@ -2,25 +2,31 @@
 /**
  * pre-commit 钩子：每次提交前问一句「这段要不要写进开发日记？」
  *
- *   选「写」→ 把这次 staged 的 diff 交给 opencode，让它照你既有文风写好一篇
- *             .md 落到 src/content/diary/，然后跟代码一起进这次 commit。
+ *   选「写」→ 把这次 staged 的 diff 交给 opencode，让它按 script/diary-style.md
+ *             的文风规范写好一篇 .md 落到 src/content/diary/，
+ *             然后跟代码一起进这次 commit。
  *   选「不写」→ 直接放行，什么都不发生。
  *
  * 两种情况会静默跳过，绝不卡住提交：
  *   · 非交互环境（GitHub Actions、脚本批处理、IDE 内嵌 git）
  *   · DIARY_SKIP=1（也可以写 SKIP_DIARY=1）
  *
+ * 用哪个模型：不传 --model，直接沿用 opencode 当前的默认模型，
+ * 也就是你此刻跟我对话用的那个。想临时换一个，设 DIARY_MODEL。
+ *
  * 可调的环境变量：
- *   DIARY_MODEL    指定模型，如 opencode-go/space-bunny-free
+ *   DIARY_MODEL    临时指定模型，如 opencode-go/space-bunny-free
  *   DIARY_TIMEOUT  AI 写稿超时秒数，默认 300
  *   DIARY_DRAFT=1  生成的日记写 draft: true（不发布），默认 false 直接发布
  *   DIARY_STRICT=1 AI 写失败时中止提交，而不是放行
  *   OPENCODE_BIN   指定 opencode 可执行文件路径
+ *
+ * 风格规范住在 script/diary-style.md。改那个文件，就改了以后所有日记的写法。
  */
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +34,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..');
 const DIARY_DIR = join(REPO, 'src', 'content', 'diary');
+const STYLE_MD = join(HERE, 'diary-style.md');
 
 const TIMEOUT = Number(process.env.DIARY_TIMEOUT || 300) * 1000;
 const DRAFT = process.env.DIARY_DRAFT === '1';
@@ -56,6 +63,21 @@ function gitText(args) {
 
 function pad(n) {
   return String(n).padStart(2, '0');
+}
+
+// 从正文里截一句当摘要：去掉 markdown 记号，压掉空白，掐到 30 字以内
+function summaryOf(body) {
+  const first = body
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .find((l) => l && !l.startsWith('#') && !l.startsWith('>') && !l.startsWith('|') && !l.startsWith('-'));
+  if (!first) return '';
+  const clean = first
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    .replace(/[*_`>]/g, '')
+    .trim();
+  return clean.length > 30 ? clean.slice(0, 30) : clean;
 }
 
 function today() {
@@ -115,20 +137,6 @@ for (const line of numstat.split(/\r?\n/)) {
   fileRows.push([file, binary ? '二进制' : `+${na} / −${nd}`]);
 }
 
-// 当天累计（含本次）
-let todayCount = Number(gitText(['rev-list', '--count', '--since=midnight', 'HEAD']).trim() || '0') + 1;
-let dayPlus = plus;
-let dayMinus = minus;
-const dayNumstat = gitText(['log', '--since=midnight', '--numstat', '--format=']);
-for (const line of dayNumstat.split(/\r?\n/)) {
-  if (!line.includes('\t')) continue;
-  const [a, d] = line.split('\t');
-  const na = Number(a);
-  const nd = Number(d);
-  if (!Number.isNaN(na)) dayPlus += na;
-  if (!Number.isNaN(nd)) dayMinus += nd;
-}
-
 // commit message（git 已经把待用信息写进 COMMIT_EDITMSG 了）
 let commitMsg = '';
 try {
@@ -140,18 +148,6 @@ try {
     .trim();
 } catch {
   /* 没有就算了，不影响 */
-}
-
-// 最近几篇日记，让 AI 自己读去学文风
-let recent = [];
-try {
-  recent = readdirSync(DIARY_DIR)
-    .filter((f) => f.endsWith('.md'))
-    .sort()
-    .reverse()
-    .slice(0, 3);
-} catch {
-  /* 目录不存在就算了 */
 }
 
 // diff 正文，长的截断
@@ -234,95 +230,116 @@ if (!bin) {
 
 /* ── 组 prompt ────────────────────────────────────────────── */
 
+/* ── 组 prompt ────────────────────────────────────────────── */
+
 const fileList = fileRows.map(([f, s]) => `- ${f}  (${s})`).join('\n');
+
+// 风格规范是硬约束。读不到就直接不写——宁可让提交过，也不写一篇跑偏的。
+let style = '';
+try {
+  style = readFileSync(STYLE_MD, 'utf8');
+} catch {
+  console.error(bold(`\n✗ 读不到文风规范：${STYLE_MD}`));
+  console.error(dim('  没有它就没法保证文风，先把 script/diary-style.md 补回来。\n'));
+  process.exit(STRICT ? 1 : 0);
+}
 
 const prompt = [
   '给这个仓库写一篇开发日记，落到 `src/content/diary/` 下。',
   '',
-  '## 先学文风',
-  ...(recent.length
-    ? [
-        '先读这几篇，把语感吃透再动笔：',
-        ...recent.map((f) => `- src/content/diary/${f}`),
-        '',
-        '注意：别学它们的排版模板，要学的是那种第一人称、有具体数字、有情绪起伏的讲法。',
-      ]
-    : ['去 `src/content/diary/` 随便挑两篇最近的读一遍，照着那个语感写。']),
+  '## 第一件事：读文风规范',
+  '',
+  '先完整读一遍 `script/diary-style.md`，那是硬约束，不是建议。',
+  '禁止清单里的东西一条都不许出现，写完必须按里面那份自查表逐条过一遍。',
+  '',
+  '**特别注意**：目录里那些旧日记是过去写的，风格已经废弃了，',
+  '不要去学它们的排版和措辞，更不要学它们出现 commit 序号和增删行数的习惯。',
+  '只按 `diary-style.md` 写。',
   '',
   '## 这次提交发生了什么',
   '',
-  `commit message：`,
+  'commit message：',
   commitMsg ? commitMsg.split('\n').map((l) => `  ${l}`).join('\n') : '  （没写，用下面的 diff 自己判断）',
   '',
-  `改动文件 ${fileRows.length} 个，共 +${plus} / −${minus}：`,
+  `改动 ${fileRows.length} 个文件：`,
   fileList,
   '',
   diff ? '```diff\n' + diff + (diffTruncated ? '\n…（diff 太长，已截断）' : '') + '\n```' : '',
   '',
-  `今天是 ${today()}。这篇日记日期填 ${today()}。`,
-  `当天累计 ${todayCount} 次提交、+${dayPlus} / −${dayMinus}（含本次），如果开头要写统计就用这个数。`,
+  '## 注意',
   '',
-  '## 硬性格式要求',
+  `今天是 ${today()}，日记日期填 ${today()}。`,
+  '上面这些文件名、diff、增删行数**只是给你理解发生了什么用的素材**，',
+  '它们绝不允许出现在日记正文里。读者是一个完全不懂技术的人，',
+  '看到 `Header.astro` 或者 `+385 / −0` 这种东西只会划走。',
   '',
-  '文件名：`' + today() + '-标题.md`，标题要具体、有画面感，别用「继续优化」「修了一些 bug」这种。',
-  '写之前先看看今天有没有同名的文件，有就换个说法，别覆盖。',
+  '把每处改动翻译成一个不懂技术的人能听懂的画面：他看见的是什么、之前什么样、现在什么样。',
+  '比如「顶栏右上角那个『关于』的小入口，手机上老是被挤到屏幕外面去，今天终于老实待住了」，',
+  '而不是「修复 Header.astro 的响应式布局」。',
   '',
-  'frontmatter 四个字段，一个都不能少：',
+  '## 文风规范全文',
   '',
-  '```yaml',
-  '---',
-  'title: 具体标题（不要加书名号）',
-  `date: ${today()}`,
-  "summary: 一句话，20 字以内",
-  `draft: ${DRAFT ? 'true' : 'false'}`,
-  '---',
+  '```markdown',
+  style,
   '```',
   '',
-  'frontmatter 之后是引言块，四行结构：',
+  '## 输出格式（重要）',
+  '',
+  '**不要写文件，不要用任何工具改这个仓库里的任何东西。**',
+  '你只负责把日记的正文输出来，存文件是钩子自己的事。',
+  '',
+  '请按下面这个格式输出，一行多余的话都不要有：',
   '',
   '```',
-  '> 项目名 · 说明一句话',
-  `> 当天 ${todayCount} 次提交 · +${dayPlus} / −${dayMinus} · 涉及 \`文件\`、\`文件\``,
-  '>',
-  '> **今日状态**：一句话结论',
+  '@@@TITLE',
+  '这里写标题，不要加书名号，不要加引号',
+  '@@@END',
   '```',
   '',
-  '正文：',
-  '· 用 `##` 分 2~4 节，节标题短一点，别写成小作文',
-  '· 讲清楚「为什么这么改」「踩了什么坑」「哪笔改动最贵」，行数、文件名、函数名都要落到具体数字',
-  '· 第一人称，口语，允许有括号里的碎碎念和吐槽',
-  '· 结尾用 `---` 隔开写两三句收尾，跟开头呼应',
-  '· 别写总结报告的口吻，别列「本次改动：1. 2. 3.」这种流水账',
-  '',
-  '## 只做这一件事',
-  '',
-  '写完那一个 .md 文件就停。不要 git add、不要 git commit、不要跑 pnpm build、不要改别的文件。',
-  '最后一行只输出你写的文件名，例如：`已写入 src/content/diary/xxxx.md`',
+  '只输出上面这一块。`@@@END` 之后不要写任何解释、总结或客套话。',
 ].join('\n');
 
 /* ── 跑 ────────────────────────────────────────────────────── */
 
-const before = existsSync(DIARY_DIR) ? new Set(readdirSync(DIARY_DIR)) : new Set();
-
 const cmd = /\.(cmd|bat)$/i.test(bin) ? 'cmd.exe' : bin;
-const args = /\.(cmd|bat)$/i.test(bin) ? ['/d', '/c', bin, 'run', '--auto', prompt] : ['run', '--auto', prompt];
-if (process.env.DIARY_MODEL) args.push('--model', process.env.DIARY_MODEL);
 
-console.error(dim(`  正在写稿（最长 ${Math.round(TIMEOUT / 1000)} 秒）…`));
+// 它在一个空目录里干活，看不见这个仓库。
+// 素材（文风规范、diff、commit message）都已经拼进 prompt 里了，
+// 它不需要读仓库的任何文件，也不需要写任何文件——只负责吐字。
+// 这样即使开了 --auto（不然它会卡在权限确认上等输入），
+// 它能碰到的也只有一个空文件夹。
+const sandbox = mkdtempSync(join(tmpdir(), 'diary-'));
+try {
+  writeFileSync(join(sandbox, 'AGENTS.md'), '这是一个空目录。不要读写任何文件，只输出文字。\n', 'utf8');
+} catch {
+  /* 写不进去也无所谓 */
+}
+
+const baseArgs = ['run', '--auto', prompt];
+const args = /\.(cmd|bat)$/i.test(bin) ? ['/d', '/c', bin, ...baseArgs] : baseArgs;
+
+// 不传 --model 就沿用 opencode 当前的默认模型
+const model = process.env.DIARY_MODEL;
+if (model) args.push('--model', model);
+
+console.error(dim(`  正在写稿（最长 ${Math.round(TIMEOUT / 1000)} 秒，用 ${model || '当前默认模型'}）…`));
 
 const result = await new Promise((resolve) => {
   let child;
   try {
     child = spawn(cmd, args, {
-      cwd: REPO,
-      stdio: ['ignore', 'ignore', 'ignore'],
+      cwd: sandbox,
+      stdio: ['ignore', 'pipe', 'ignore'],
       windowsHide: true,
       env: { ...process.env, NO_COLOR: '1' },
     });
   } catch (err) {
-    resolve({ code: -1, reason: String(err) });
+    resolve({ code: -1, reason: String(err), out: '' });
     return;
   }
+
+  let out = '';
+  child.stdout.on('data', (d) => (out += d.toString()));
 
   let settled = false;
   const finish = (r) => {
@@ -339,41 +356,91 @@ const result = await new Promise((resolve) => {
     } else {
       child.kill('SIGKILL');
     }
-    finish({ code: -1, reason: `超时 ${Math.round(TIMEOUT / 1000)} 秒` });
+    finish({ code: -1, reason: `超时 ${Math.round(TIMEOUT / 1000)} 秒`, out });
   }, TIMEOUT);
 
-  child.on('error', (err) => finish({ code: -1, reason: String(err) }));
-  child.on('close', (code) => finish({ code, reason: `退出码 ${code}` }));
+  child.on('error', (err) => finish({ code: -1, reason: String(err), out }));
+  child.on('close', (code) => finish({ code, reason: `退出码 ${code}`, out }));
 });
 
-if (result.code !== 0) {
-  const msg = `opencode 没写成（${result.reason}）`;
+if (process.env.DIARY_VERBOSE === '1' && result.code === 0) {
+  console.error(dim('  ── 原文 ──'));
+  console.error(dim(result.out.trim()));
+  console.error(dim('  ──────────'));
+}
+
+// 空文件夹没用了
+try {
+  rmSync(sandbox, { recursive: true, force: true });
+} catch {
+  /* 临时目录留在系统 temp 里也无所谓 */
+}
+
+function fail(msg, hint) {
   if (STRICT) {
-    console.error(bold(`\n✗ ${msg}\n  已中止本次提交，修好后重试，或设 DIARY_SKIP=1 跳过。\n`));
+    console.error(bold(`\n✗ ${msg}\n  ${hint}\n`));
     process.exit(1);
   }
-  console.error(bold(`\n✗ ${msg}\n  ${dim('已放行本次提交，日记可以稍后补。')}\n`));
+  console.error(bold(`\n✗ ${msg}\n  ${dim(`${hint}\n  已放行本次提交。`)}\n`));
   process.exit(0);
 }
 
-/* ── 校验产物，然后跟代码一起提交 ──────────────────────────── */
-
-const after = existsSync(DIARY_DIR) ? readdirSync(DIARY_DIR) : [];
-const created = after.filter((f) => f.endsWith('.md') && !before.has(f));
-
-if (created.length === 0) {
-  console.error(bold(`\n✗ opencode 跑完了，但 src/content/diary/ 里没有新文件`));
-  console.error(dim(`  已放行本次提交。可以自己跑一次看看，或者设 DIARY_STRICT=1 让它拦住提交。\n`));
-  process.exit(STRICT ? 1 : 0);
+if (result.code !== 0) {
+  fail(`opencode 没写成（${result.reason}）`, '重跑一次就好，或设 DIARY_SKIP=1 临时关闭。');
 }
 
-for (const f of created) {
-  const p = join('src', 'content', 'diary', f);
-  git(['add', '--', p]);
-  console.error(green(`  + ${p}`));
+/* ── 从输出里把日记抠出来，自己落盘 ────────────────────────── */
+
+const m = result.out.match(/@@@TITLE\s*\r?\n([\s\S]*?)\r?\n?@@@END/);
+if (!m) {
+  fail(
+    'opencode 的输出里找不到约定的日记内容',
+    '它可能没按格式来。设 DIARY_VERBOSE=1 能看到原文，或者重跑一次（免费模型偶尔会跑偏）。',
+  );
 }
 
-console.error(green(`\n  ${created.length} 篇日记已并入这次提交。`));
+// 只取 END 之后的正文——END 之后的话是它自己的絮叨，不属于日记
+const title = m[1].trim();
+const body = result.out.slice(m.index + m[0].length);
+if (!title || !body.trim()) {
+  fail('opencode 给的标题或正文是空的', '重跑一次就好。');
+}
+
+// 标题里的路径分隔符和 Windows 非法字符会直接把文件写到别处去
+const safeTitle = title.replace(/[\\/:*?"<>|]/g, '').trim();
+if (!safeTitle) {
+  fail(`标题「${title}」去掉非法字符后空了`, '换个说法重跑。');
+}
+
+const fileName = `${today()}-${safeTitle}.md`;
+
+// 同名不覆盖，那天已经有一篇同名日记了
+if (existsSync(join(DIARY_DIR, fileName))) {
+  fail(`今天已经有一篇《${safeTitle}》了`, '换个标题重跑，或者把这一篇并进原来那篇。');
+}
+
+const full = [
+  '---',
+  `title: ${title}`,
+  `date: ${today()}`,
+  'summary: ' + (summaryOf(body) || '今天写代码写了一天。'),
+  `draft: ${DRAFT ? 'true' : 'false'}`,
+  '---',
+  '',
+  body.trim(),
+  '',
+].join('\n');
+
+const relPath = join('src', 'content', 'diary', fileName);
+try {
+  writeFileSync(join(DIARY_DIR, fileName), full, 'utf8');
+} catch (err) {
+  fail(`写文件失败：${err.message}`, '检查一下 src/content/diary/ 的权限。');
+}
+
+git(['add', '--', relPath]);
+console.error(green(`  + ${relPath}`));
+console.error(green(`\n  已并入这次提交。`));
 if (DRAFT) console.error(dim('  draft: true，记得改成 false 才会发布。'));
 console.error('');
 process.exit(0);
