@@ -1160,8 +1160,8 @@ html.js .months__indicator {
 }
 
 .post--solo .post-content > p:last-of-type {
+  /* 结尾落款：跟正文同侧，只换楷体收一个小尾巴，不飘 */
   margin-top: 2.2em;
-  text-align: right;
   font-family: var(--font-kai);
   color: var(--text-2);
 }
