@@ -6,6 +6,13 @@ export function formatDateCN(date: Date): string {
 /** 中文数字：题签用（2026 → 二〇二六） */
 const CN_DIGITS = '〇一二三四五六七八九';
 
+/** 项目名 → 稳定色相（0-359）：来源标记的小色点用 */
+export function hueOf(name: string): number {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + (ch.codePointAt(0) ?? 0)) % 360;
+  return h;
+}
+
 export function cnNum(n: number): string {
   return String(n)
     .split('')

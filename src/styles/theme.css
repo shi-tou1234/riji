@@ -808,10 +808,39 @@ html:not(.js) .index__month::after {
   margin: 10px 0 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 0;
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   color: var(--text-3);
+}
+
+/* 来源项目标记：一枚斜贴的小色点 + 项目名，色相由项目名算出（见 hueOf） */
+.proj-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-right: 6px;
+}
+
+.proj-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proj-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  background-color: hsl(var(--hue) 42% 46%);
+  border-radius: 2px;
+  transform: rotate(-6deg);
+}
+
+[data-theme='dark'] .proj-chip::before {
+  background-color: hsl(var(--hue) 40% 62%);
 }
 
 .entry__arrow {
@@ -1066,6 +1095,55 @@ html.js .months__indicator {
   align-items: start;
   max-width: var(--wide-width);
   margin: 0 auto;
+}
+
+/* 卷首语（关于页）：没有目录，单栏居中，别让右侧空出 200px 的白地 */
+.post--solo {
+  grid-template-columns: minmax(0, var(--page-width));
+}
+
+/* 「卷首语」题字：与首页卷目、文章页目录同一套小方章题字 */
+.post__kicker {
+  display: flex;
+  align-items: center;
+  margin: 0 0 12px;
+  font-family: var(--font-kai);
+  font-size: 0.78rem;
+  letter-spacing: 0.32em;
+  color: var(--text-3);
+}
+
+.post__kicker::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-right: 9px;
+  background-color: var(--accent);
+  border-radius: 1px;
+  transform: rotate(-8deg);
+  opacity: 0.8;
+}
+
+/* 卷首语不吃日记页的三样规矩：首字下沉、「终」章、末行落款居左 */
+.post--solo .post-content > p:first-of-type::first-letter {
+  float: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border-radius: 0;
+}
+
+.post--solo .post-content::after {
+  content: none;
+}
+
+.post--solo .post-content > p:last-of-type {
+  margin-top: 2.2em;
+  text-align: right;
+  font-family: var(--font-kai);
+  color: var(--text-2);
 }
 
 .post__main {
@@ -1398,6 +1476,30 @@ html[data-vt='theme']::view-transition-old(root),
 html[data-vt='theme']::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+/* 换页期间不做入场戏：内容跟着交叉淡入直接落位，
+   不然旧页淡出后露出一段空纸，内容再自己「浮」上来，两套动画打架 */
+html.no-anim [data-reveal],
+html.no-anim .reveal {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+html.no-anim .hero__seal {
+  animation: none !important;
+}
+
+html.no-anim .hero__kicker::before,
+html.no-anim .hero__kicker::after {
+  animation: none !important;
+}
+
+html.no-anim .index__month::after {
+  transform: scaleX(1) !important;
+  transition: none !important;
 }
 
 /* =========================================================

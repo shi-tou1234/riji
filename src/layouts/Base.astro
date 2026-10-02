@@ -60,13 +60,19 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
     <script is:inline>
       (function () {
         var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        /* ClientRouter 换页期间置真：入场动画整体跳过，内容随交叉淡入直接出现 */
+        var vtNav = false;
+        document.addEventListener('astro:before-swap', function () {
+          vtNav = true;
+          document.documentElement.classList.add('no-anim');
+        });
 
         /* 滚动入场：带 data-reveal 的元素进入视口时落位。
            首屏批次沿用各自的 --d 做编排，之后滚到的立即出现，不再傻等延迟 */
         function setupReveals() {
           var els = document.querySelectorAll('[data-reveal]:not(.in)');
           if (!els.length) return;
-          if (reduce || !('IntersectionObserver' in window)) {
+          if (reduce || vtNav || !('IntersectionObserver' in window)) {
             els.forEach(function (el) {
               el.classList.add('in');
             });
@@ -92,13 +98,13 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
           });
         }
 
-        /* 首页统计数字滚动：SSR 直出终值，无 JS 时数字原样 */
+        /* 首页统计数字滚动：SSR 直出终值，无 JS 时数字原样；换页直达终值不重滚 */
         function countUp() {
           document.querySelectorAll('[data-count]').forEach(function (el) {
             if (el.__counted) return;
             el.__counted = 1;
             var target = parseInt(el.dataset.count, 10);
-            if (isNaN(target) || reduce || target <= 0) return;
+            if (isNaN(target) || reduce || vtNav || target <= 0) return;
             var t0 = null;
             function step(t) {
               if (!t0) t0 = t;
@@ -359,8 +365,17 @@ const pageTitle = title ? `${title} · ${siteInfo.title}` : siteInfo.title;
           setupTabs();
         }
 
-        /* ClientRouter 存在时 astro:page-load 首次加载也会触发 */
-        document.addEventListener('astro:page-load', initAll);
+        /* ClientRouter 存在时 astro:page-load 首次加载也会触发。
+           换页的首帧画完后再撤掉 no-anim，恢复后续滚动入场的正常灵敏度 */
+        document.addEventListener('astro:page-load', function () {
+          initAll();
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              document.documentElement.classList.remove('no-anim');
+              vtNav = false;
+            });
+          });
+        });
         initAll();
       })();
     </script>

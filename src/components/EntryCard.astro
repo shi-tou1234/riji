@@ -1,6 +1,6 @@
 ---
 import type { CollectionEntry } from 'astro:content';
-import { readingTime } from '@utils/format';
+import { hueOf, readingTime } from '@utils/format';
 import { withBase } from '@utils/urls';
 
 interface Props {
@@ -29,6 +29,17 @@ const pad = (n: number) => String(n).padStart(2, '0');
       <h2 class="entry__title">{entry.data.title}</h2>
       {summary && <p class="entry__summary">{summary}</p>}
       <p class="entry__meta">
+        {
+          entry.data.projects.length > 0 && (
+            <span class="proj-chips">
+              {entry.data.projects.map((p) => (
+                <span class="proj-chip" style={`--hue: ${hueOf(p)}`}>
+                  {p}
+                </span>
+              ))}
+            </span>
+          )
+        }
         <span>约 {minutes} 分钟</span>
         <span class="entry__arrow" aria-hidden="true">→</span>
       </p>

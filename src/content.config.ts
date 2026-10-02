@@ -16,6 +16,8 @@ const diary = defineCollection({
     date: z.coerce.date(),
     /** 一句话摘要，首页卡片用；不写会从正文首段自动截取 */
     summary: z.string().default(''),
+    /** 来源项目展示名（可多个：一天写过几个项目就都标）。script/apply-projects.mjs 按日期批量回填 */
+    projects: z.array(z.string()).default([]),
     /** 草稿不参与构建，也不出现在首页。写完改 false 即可发布 */
     draft: z.boolean().default(false),
   }),
