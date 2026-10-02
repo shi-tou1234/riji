@@ -38,17 +38,22 @@ export function readingTime(text: string): number {
   return Math.max(1, Math.round(minutes));
 }
 
-/** 首段当摘要：去掉代码块、每行的引用/列表标记和行内强调符号 */
+/** 首段当摘要：去掉代码块、每行的引用/列表标记和行内强调符号；
+ *  引子里的「今日状态：」标签换成破折号，读起来才是一句话 */
 export function excerpt(markdown: string, len = 90): string {
   const body = markdown
+    .replace(/\r\n?/g, '\n') /* CRLF 先拍平，别让 \r 混进任何一行 */
     .replace(/```[\s\S]*?```/g, '')
     .split(/\n\s*\n/)
-    .map((p) =>
-      p
+    .map((p) => {
+      const joined = p
         .replace(/^\s*[#>\-*]+\s?/gm, '')
-        .replace(/[*_`[\]()]/g, '')
-        .trim(),
-    )
+        .split('\n')
+        .map((l) => l.replace(/[*_`[\]()]/g, '').trim())
+        .filter(Boolean)
+        .join('');
+      return joined.replace(/^(.*?)今日状态[:：]\s*/, '$1——');
+    })
     .find((p) => p.length > 10);
   if (!body) return '';
   return body.length > len ? `${body.slice(0, len).trimEnd()}…` : body;

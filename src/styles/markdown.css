@@ -272,14 +272,14 @@
 
 .post-content > p:first-of-type::first-letter {
   float: left;
-  margin: 0.08em 0.18em 0 0;
-  padding: 0.04em 0.1em 0.06em 0.12em;
+  margin: 0.08em 0.16em 0 0;
+  padding: 0.02em 0.08em 0.04em 0.1em;
   font-family: var(--font-kai);
   font-size: 2.7em;
   line-height: 1;
   color: var(--accent);
-  /* 篇首字下垫一层淡墨底，像界格里的第一个字 */
-  background-color: color-mix(in srgb, var(--accent) 6%, transparent);
+  /* 篇首字下垫一层几乎看不见的墨晕，只求把首字「按」住一点 */
+  background-color: color-mix(in srgb, var(--accent) 4%, transparent);
   border-radius: var(--radius-sm);
 }
 

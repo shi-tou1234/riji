@@ -97,11 +97,11 @@ body {
   flex-direction: column;
   background-color: var(--bg);
   /* 页首一抹很淡的朱砂暖光，把视线压向刊头。
-     百分比压低、扩散放大——浓度一高就是「一块粉补丁」而不是光 */
+     要足够扁、足够远、边界足够糊——但凡能看出椭圆轮廓就成了「一块印痕」 */
   background-image: radial-gradient(
-    1400px 480px at 50% -180px,
-    color-mix(in srgb, var(--accent) 6%, transparent),
-    transparent 62%
+    1700px 560px at 50% -300px,
+    color-mix(in srgb, var(--accent) 4.5%, transparent),
+    transparent 72%
   );
   color: var(--text);
   font-family: var(--font-serif);
@@ -133,12 +133,13 @@ body::before {
   content: none;
 }
 
-/* 夜间换一盏灯：刊头顶上一圈更暖更亮的朱砂光，像灯下看手记 */
+/* 夜间换一盏灯：刊头顶上一圈更暖更亮的朱砂光，像灯下看手记。
+   同样要糊掉边界，别让暖光看得出形状 */
 [data-theme='dark'] body {
   background-image: radial-gradient(
-    1300px 470px at 50% -150px,
-    color-mix(in srgb, var(--accent) 11%, transparent),
-    transparent 66%
+    1600px 620px at 50% -280px,
+    color-mix(in srgb, var(--accent) 8%, transparent),
+    transparent 74%
   );
 }
 
@@ -300,21 +301,6 @@ img {
   gap: 12px;
 }
 
-/* 双线上压一段朱砂重点线，跟文章页日期下的处理呼应：
-   骑在副线位置，宽度罩住左侧刊名 */
-.header__inner::after {
-  content: '';
-  position: absolute;
-  left: 4vw;
-  bottom: -4px;
-  width: 128px;
-  max-width: 34vw;
-  height: 2px;
-  background-color: var(--accent);
-  border-radius: 2px;
-  pointer-events: none;
-}
-
 .header__brand {
   display: inline-flex;
   align-items: center;
@@ -444,38 +430,40 @@ img {
 .hero {
   position: relative;
   max-width: var(--page-width);
-  margin: 0 auto 72px;
-  padding: 30px 0 0;
+  margin: 0 auto 56px;
+  padding: 30px 0 4px;
   text-align: center;
 }
 
-/* 书桌角贴纸：一盏台灯、一本厚书和一盆绿植，蹲在刊头右侧。
-   z-index: -1 垫在文字后面，绝不 overflow 裁切（铁律 1） */
+/* 书桌角贴纸：一盏台灯、一本厚书和一盆绿植，蹲在刊头右下角。
+   z-index: -1 垫在文字后面；收在容器右缘之内，不要悬出格子（铁律 1） */
 .hero__art {
   position: absolute;
-  right: -16px;
-  bottom: -20px;
+  right: 0;
+  bottom: -14px;
   z-index: -1;
-  width: clamp(150px, 16vw, 216px);
+  width: clamp(150px, 14.5vw, 198px);
   height: auto;
   pointer-events: none;
   user-select: none;
-  filter: drop-shadow(0 12px 20px color-mix(in srgb, var(--shadow) 55%, transparent));
+  filter: drop-shadow(0 12px 20px color-mix(in srgb, var(--shadow) 50%, transparent));
 }
 
-/* 刊头收尾：一道「线—方章—线」的界栏，把视线交给目录 */
+/* 刊头收尾：一道「线—方章—线」的界栏，与右侧贴纸各占一角。
+   bottom 对齐统计行的视觉中线，别差半个像素看着悬 */
 .hero::after {
   content: '';
-  display: block;
-  width: min(200px, 56vw);
+  position: absolute;
+  left: 0;
+  bottom: 13px;
+  width: min(200px, 30vw);
   height: 7px;
-  margin: 36px auto 0;
   background-image: linear-gradient(var(--accent), var(--accent)),
     linear-gradient(var(--line-strong), var(--line-strong));
   background-repeat: no-repeat;
   background-size: 7px 7px, 100% 1px;
   background-position: center, center;
-  opacity: 0.85;
+  opacity: 0.7;
 }
 
 /* 眉线：一行等宽小字，左右各一道短规线 */
@@ -1475,7 +1463,8 @@ html[data-vt='theme']::view-transition-new(root) {
     padding-top: 12px;
   }
 
-  /* 窄屏上贴纸退回正常流：靠右站在界栏线下面，不跟文字抢地方 */
+  /* 窄屏上贴纸退回正常流：靠右站在标语下面，不跟文字抢地方；
+     左下角的界栏线跟统计行打架，小屏不画 */
   .hero__art {
     position: static;
     display: block;
@@ -1485,7 +1474,7 @@ html[data-vt='theme']::view-transition-new(root) {
   }
 
   .hero::after {
-    margin-top: 26px;
+    display: none;
   }
 
   .hero__kicker {
