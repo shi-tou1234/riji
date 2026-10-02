@@ -41,6 +41,15 @@ const pad = (n: number) => String(n).padStart(2, '0');
           )
         }
         <span>约 {minutes} 分钟</span>
+        {
+          entry.data.models.length > 0 && (
+            <span class="model-chips">
+              {entry.data.models.map((m) => (
+                <span class="model-chip">{m}</span>
+              ))}
+            </span>
+          )
+        }
         <span class="entry__arrow" aria-hidden="true">→</span>
       </p>
     </div>

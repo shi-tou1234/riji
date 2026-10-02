@@ -843,6 +843,26 @@ html:not(.js) .index__month::after {
   background-color: hsl(var(--hue) 40% 62%);
 }
 
+/* 当天模型标记：发丝线小药丸，和项目色点区分——点说「哪来的」，药丸说「用什么写的」 */
+.model-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.entry__meta .model-chips {
+  margin-left: auto;
+}
+
+.model-chip {
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent);
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .entry__arrow {
   margin-left: auto;
   color: var(--accent);

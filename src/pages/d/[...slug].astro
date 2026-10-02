@@ -52,6 +52,15 @@ const backLabel = cnMonthLabel(
             </span>
           )
         }
+        {
+          entry.data.models.length > 0 && (
+            <span class="model-chips">
+              {entry.data.models.map((m) => (
+                <span class="model-chip">{m}</span>
+              ))}
+            </span>
+          )
+        }
       </p>
       <div class="post-content">
         <Content />

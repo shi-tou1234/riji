@@ -18,6 +18,8 @@ const diary = defineCollection({
     summary: z.string().default(''),
     /** 来源项目展示名（可多个：一天写过几个项目就都标）。script/apply-projects.mjs 按日期批量回填 */
     projects: z.array(z.string()).default([]),
+    /** 当天用过的模型（按 token 取前三，script/apply-models.mjs 从 Token Monitor 归档回填） */
+    models: z.array(z.string()).default([]),
     /** 草稿不参与构建，也不出现在首页。写完改 false 即可发布 */
     draft: z.boolean().default(false),
   }),
